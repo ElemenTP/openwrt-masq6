@@ -112,10 +112,15 @@ handle_zone() {
     local postrouting_chain="zone_${zone_name}_postrouting"
     log "Ensuring ip6tables chain=\"$postrouting_chain\" contains our MASQUERADE."
 
-    if ! ip6t_ensure_append "$postrouting_chain" -t nat -s "$ula_prefix" -j MASQUERADE; then
+    local wan6_iface
+    network_find_wan6 wan6_iface
+    local wan6_device
+    network_get_device wan6_device "$wan6_iface"
+
+    if ! ip6t_ensure_append "$postrouting_chain" -t nat -s "$ula_prefix" -o "$wan6_device" -j MASQUERADE; then
         # Some releases of OpenWrt just leave the nat table empty for some reason (version dependent?)
         log "Could not find table=\"$postrouting_chain\", but yolo so adding to POSTROUTING directly."
-        ip6t_ensure_append "POSTROUTING" -t nat -s "$ula_prefix" -j MASQUERADE
+        ip6t_ensure_append "POSTROUTING" -t nat -s "$ula_prefix" -o "$wan6_device" -j MASQUERADE
     fi
 
     local DONE_NETWORK_DEVICES=""
